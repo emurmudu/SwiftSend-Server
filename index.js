@@ -2,10 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const app = express();
-const port = process.env.PORT || 8000;
+const port = process.env.PORT || 5001;
 
 //middleware
 
@@ -15,31 +15,9 @@ app.use(cors({
     ],
     credentials: true
 }));
+app.use(cookieParser());
+// app.use(cors());
 app.use(express.json());
-
-
-
-const logger = (req, res, next) => {
-    console.log('logging info', req.method, req.url);
-    next();
-}
-
-const verifyingToken = (req, res, next) => {
-    const token = req?.cookies?.token;
-    console.log('Middleware token', token);
-    if (!token) {
-        return res.status(401).send({ message: 'unauthorize access' })
-    }
-    jwt.verify(token, process.env.ACCESS_TOKEN, (err, decode) => {
-        if (err) {
-            return res.status(401).send({ message: 'unauthorize access' })
-        }
-        req.user = decode;
-        next();
-    })
-
-}
-
 
 
 
@@ -58,48 +36,178 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
         const userCollection = client.db('userDB').collection('user');
+        const bookedParcelCollection = client.db('userDB').collection('bookedParcels');
 
 
-
-        //create user on database
-        app.post('/user', async (req, res) => {
-            const user = req.body;
-            console.log(user);
-            const result = await userCollection.insertOne(user);
-            res.send(result);
-        })
-
-        //read user
-        app.get('/user', async (req, res) => {
-            const cursor = userCollection.find();
-            const users = await cursor.toArray();
-            res.send(users);
-        })
-
-
-
-        //auth related api
-        app.post('/jwt', logger, async (req, res) => {
+        // auth related api using http cookie
+        app.post('/jwt', async (req, res) => {
             const user = req.body;
             console.log('user token', user);
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
 
-            // res.send({ token });
             res.cookie('token', token, {
                 httpOnly: true,
                 secure: true,
                 sameSite: 'none'
             })
-                .send({ success: true });
+            // res.send({ success: true });
+            res.send({ token });
         })
+
+
+
+        // Middleware to verify the token
+        const verifyToken = (req, res, next) => {
+            console.log('inside verifyToken', req.headers.authorization);
+            if (!req.headers.authorization) {
+                return res.status(401).send({ message: 'unauthorized access' });
+            }
+            const token = req.headers.authorization.split(' ')[1];
+            jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decode) => {
+                if (err) {
+                    return res.status(401).send({ message: 'unauthorized access' })
+                }
+                req.decode = decode;
+                next();
+            })
+        }
+
+
+
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decode.email;
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            const isAdmin = user?.role === 'admin';
+            if (!isAdmin) {
+                return res.status(403).send({ message: 'forbidden access' });
+            }
+            next();
+        }
+
+
+
+
+
+        app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+            const page = req.query.page || 1;
+            const pageSize = 5;
+
+            try {
+                const result = await userCollection.find()
+                    .skip((page - 1) * pageSize)
+                    .limit(pageSize)
+                    .toArray();
+
+                res.send(result);
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ message: 'Internal Server Error' });
+            }
+        });
+
+
+        app.get('/user/admin/:email', verifyToken, async (req, res) => {
+            const email = req.params.email;
+            if (email !== req.decode.email) {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            let admin = false;
+            if (user) {
+                admin = user?.role === 'admin';
+            }
+            res.send({ admin });
+
+        })
+
+
+        app.get('/user/deliveryMan/:email', verifyToken, async (req, res) => {
+            const email = req.params.email;
+            if (email !== req.decode.email) {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            let deliveryMan = false;
+            if (user) {
+                deliveryMan = user?.role === 'deliveryMan';
+            }
+            res.send({ deliveryMan });
+
+        })
+
+
+        app.post('/user', async (req, res) => {
+            const users = req.body;
+            //insert user email if it is not exist in current database
+            const query = { email: users.email }
+            const existingUser = await userCollection.findOne(query);
+            if (existingUser) {
+                return res.send({ message: 'user already exists', insertedId: null });
+            }
+            console.log(users);
+            const result = await userCollection.insertOne(users);
+            res.send(result);
+        })
+
+
+
+
+        app.patch('/user/admin/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    role: 'admin'
+                }
+            }
+            const result = await userCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        })
+
+
+        app.patch('/user/deliveryMan/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    role: 'deliveryMan'
+                }
+            }
+            const result = await userCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        })
+
+
+
+        //users booking parcel api
+        app.post('/bookedParcels', async (req, res) => {
+            const addedParcel = req.body;
+            console.log(addedParcel);
+            const result = await bookedParcelCollection.insertOne(addedParcel);
+            res.send(result);
+        })
+
+
+
+
+        app.delete('/user/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await userCollection.deleteOne(query);
+            res.send(result);
+        })
+
 
 
         app.post('/logout', async (req, res) => {
             const user = req.body;
-            console.log('logging out', user)
+            console.log('logged out', user)
             res.clearCookie('token', { maxAge: 0 }).send({ success: true })
         })
 
