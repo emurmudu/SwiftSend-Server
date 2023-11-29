@@ -141,7 +141,20 @@ async function run() {
 
         })
 
+        // find delivery men
+        // app.get('/deliveryMen', verifyToken, verifyAdmin, async (req, res) => {
+        app.get('/deliveryMen', async (req, res) => {
+            try {
+                const result = await userCollection.find({ role: 'deliveryMan' }).toArray();
+                res.send(result);
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ message: 'Internal Server Error' });
+            }
+        });
 
+
+        // api for creating user on database
         app.post('/user', async (req, res) => {
             const users = req.body;
             //insert user email if it is not exist in current database
@@ -157,7 +170,7 @@ async function run() {
 
 
 
-
+        // api for make user as admin
         app.patch('/user/admin/:id', async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
@@ -170,7 +183,7 @@ async function run() {
             res.send(result);
         })
 
-
+        // api for make user as deliveryMan
         app.patch('/user/deliveryMan/:id', async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
@@ -185,7 +198,7 @@ async function run() {
 
 
 
-        //users booking parcel api
+        //api for adding data to database by all users/Parcel Booking
         app.post('/bookedParcels', async (req, res) => {
             const addedParcel = req.body;
             console.log(addedParcel);
@@ -194,6 +207,83 @@ async function run() {
         })
 
 
+
+
+        // api for updating status, adding new field
+        app.put('/bookedParcels/:id', async (req, res) => {
+            const parcelId = req.params.id;
+            const { status, deliveryMenId, approximateDeliveryDate } = req.body;
+
+
+            if (!ObjectId.isValid(parcelId)) {
+                return res.status(400).json({ error: 'Invalid Parcel ID' });
+            }
+
+            try {
+
+                const result = await bookedParcelCollection.updateOne(
+                    { _id: new ObjectId(parcelId) },
+                    {
+                        $set: {
+                            status: status || 'On The Way',
+                            deliveryMenId,
+                            approximateDeliveryDate,
+                        },
+                    }
+                );
+
+                if (result.modifiedCount > 0) {
+                    return res.json({ success: true, message: 'Parcel updated successfully' });
+                } else {
+                    return res.status(404).json({ error: 'Parcel not found' });
+                }
+            } catch (error) {
+                console.error('Error updating parcel:', error);
+                return res.status(500).json({ error: 'Internal Server Error' });
+            }
+        });
+
+
+
+
+        // api for getting all booked parcel which are added by all user/All Parcels
+        app.get('/bookedParcels', async (req, res) => {
+            const page = parseInt(req.query.page) || 1;
+            const pageSize = 5;
+
+            try {
+                const result = await bookedParcelCollection.find()
+                    .skip((page - 1) * pageSize)
+                    .limit(pageSize)
+                    .toArray();
+
+                res.send(result);
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({ error: 'Internal Server Error' });
+            }
+        });
+
+
+        // api for getting user based added data/My Parcels
+        app.get('/bookedParcels/:email', async (req, res) => {
+            const page = parseInt(req.query.page) || 1;
+            const pageSize = 5;
+
+            try {
+                const email = req.params.email;
+
+                const result = await bookedParcelCollection.find({ email })
+                    .skip((page - 1) * pageSize)
+                    .limit(pageSize)
+                    .toArray();
+
+                res.send(result);
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({ error: 'Internal Server Error' });
+            }
+        });
 
 
         app.delete('/user/:id', async (req, res) => {
