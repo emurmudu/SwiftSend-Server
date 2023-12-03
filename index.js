@@ -4,19 +4,40 @@ const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
+
+// const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+
 const app = express();
 const port = process.env.PORT || 5001;
 
 //middleware
 
-app.use(cors({
+// app.use(cors({
+//     origin: [
+//         // 'http://localhost:5173',
+//         'https://assignment-12-client-f25b1.web.app',
+//         'https://assignment-12-client-f25b1.firebaseapp.com'
+//     ],
+//     credentials: true
+// }));
+// app.use(cors());
+
+const corsOptions = {
     origin: [
         'http://localhost:5173',
+        'https://assignment-12-client-f25b1.web.app',
+        'https://assignment-12-client-f25b1.firebaseapp.com'
     ],
-    credentials: true
-}));
+    credentials: true,
+    optionSuccessStatus: 200,
+}
+app.use(cors(corsOptions))
+app.options('*', cors());
+
+
 app.use(cookieParser());
-// app.use(cors());
+app.use(bodyParser.json());
 app.use(express.json());
 
 
@@ -40,6 +61,9 @@ async function run() {
 
         const userCollection = client.db('userDB').collection('user');
         const bookedParcelCollection = client.db('userDB').collection('bookedParcels');
+        const actionsCollection = client.db('userDB').collection('actions');
+        app.use(bodyParser.json());
+
 
 
         // auth related api using http cookie
@@ -154,6 +178,8 @@ async function run() {
         });
 
 
+
+
         // api for creating user on database
         app.post('/user', async (req, res) => {
             const users = req.body;
@@ -221,6 +247,8 @@ async function run() {
 
             try {
 
+                console.log('Delivery Men ID:', deliveryMenId);
+                console.log('Approximate Delivery Date:', approximateDeliveryDate);
                 const result = await bookedParcelCollection.updateOne(
                     { _id: new ObjectId(parcelId) },
                     {
@@ -244,15 +272,153 @@ async function run() {
         });
 
 
+        app.get('/updateBooking/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await bookedParcelCollection.findOne(query);
+            res.send(result);
+        })
+
+
+        // Updating bookings with id
+        app.put('/updateBooking/:id', async (req, res) => {
+            const id = req.params.id;
+            console.log('what is id:', id);
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true };
+            const updateBooking = req.body;
+            const booking = {
+                $set: {
+                    name: updateBooking.name,
+                    users_phone: updateBooking.users_phone,
+                    parcel_type: updateBooking.parcel_type,
+                    email: updateBooking.email,
+                    parcel_weight: updateBooking.parcel_weight,
+                    receiver_name: updateBooking.receiver_name,
+                    receiver_phone: updateBooking.receiver_phone,
+                    delivery_address: updateBooking.short_description,
+                    requested_delivery_date: updateBooking.requested_delivery_date,
+                    latitude: updateBooking.latitude,
+                    longitude: updateBooking.longitude,
+                    price: updateBooking.price,
+                    status: updateBooking.status,
+                    approximateDeliveryDate: updateBooking.approximateDeliveryDate,
+                    deliveryMenId: updateBooking.deliveryMenId
+
+                }
+            }
+            const result = await bookedParcelCollection.updateOne(filter, booking, options);
+            res.send(result);
+        })
+
+
+
 
 
         // api for getting all booked parcel which are added by all user/All Parcels
+        // app.get('/bookedParcels', async (req, res) => {
+        //     const page = parseInt(req.query.page) || 1;
+        //     const pageSize = 5;
+
+        //     try {
+        //         const result = await bookedParcelCollection.find()
+        //             .skip((page - 1) * pageSize)
+        //             .limit(pageSize)
+        //             .toArray();
+
+        //         res.send(result);
+        //     } catch (error) {
+        //         console.error(error);
+        //         res.status(500).json({ error: 'Internal Server Error' });
+        //     }
+        // });
+
+
+        // app.get('/bookedParcels', async (req, res) => {
+        //     const page = parseInt(req.query.page) || 1;
+        //     const pageSize = 5;
+        //     const startDate = req.query.startDate;
+        //     const endDate = req.query.endDate;
+
+        //     const query = {};
+
+        //     // Add date range conditions if startDate and endDate are provided
+        //     if (startDate && endDate) {
+        //         query.requested_delivery_date = {
+        //             $gte: new Date(startDate),
+        //             $lte: new Date(endDate),
+        //         };
+        //     }
+
+        //     try {
+        //         const result = await bookedParcelCollection
+        //             .find(query)
+        //             .skip((page - 1) * pageSize)
+        //             .limit(pageSize)
+        //             .toArray();
+
+        //         res.send(result);
+        //     } catch (error) {
+        //         console.error(error);
+        //         res.status(500).json({ error: 'Internal Server Error' });
+        //     }
+        // });
+
+
+
+        // app.get('/bookedParcels', async (req, res) => {
+        //     const page = parseInt(req.query.page) || 1;
+        //     const pageSize = 5;
+        //     const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
+        //     const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
+
+        //     const query = {};
+
+        //     // Add date range conditions if startDate and endDate are provided
+        //     if (startDate && endDate) {
+        //         query.requested_delivery_date = {
+        //             $gte: startDate,
+        //             $lte: endDate,
+        //         };
+        //     }
+
+        //     try {
+        //         const result = await bookedParcelCollection
+        //             .find(query)
+        //             .skip((page - 1) * pageSize)
+        //             .limit(pageSize)
+        //             .toArray();
+
+        //         res.send(result);
+        //     } catch (error) {
+        //         console.error(error);
+        //         res.status(500).json({ error: 'Internal Server Error' });
+        //     }
+        // });
+
+
+
+
+
         app.get('/bookedParcels', async (req, res) => {
             const page = parseInt(req.query.page) || 1;
             const pageSize = 5;
+            const startDate = req.query.startDate ? parseDate(req.query.startDate) : null;
+            const endDate = req.query.endDate ? parseDate(req.query.endDate) : null;
+
+            const query = {};
+
+
+            if (startDate && endDate) {
+                query.requested_delivery_date = {
+                    $gte: startDate,
+                    $lte: endDate,
+                };
+            }
 
             try {
-                const result = await bookedParcelCollection.find()
+                const result = await bookedParcelCollection
+                    .find(query)
                     .skip((page - 1) * pageSize)
                     .limit(pageSize)
                     .toArray();
@@ -263,6 +429,12 @@ async function run() {
                 res.status(500).json({ error: 'Internal Server Error' });
             }
         });
+
+
+        function parseDate(dateString) {
+            const [day, month, year] = dateString.split('/');
+            return new Date(year, month - 1, day);
+        }
 
 
         // api for getting user based added data/My Parcels
@@ -286,12 +458,250 @@ async function run() {
         });
 
 
+
+
+
         app.delete('/user/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
             const result = await userCollection.deleteOne(query);
             res.send(result);
         })
+
+
+
+        // app.get('/my-deliveries', async (req, res) => {
+        //     const deliveryMenId = '6564dc9e85a82632a77cfc6f'; // Assume you have the delivery man's ID in the request
+
+        //     try {
+        //         const parcels = await bookedParcelCollection.find({ deliveryMenId }).toArray();
+        //         res.json(parcels);
+        //     } catch (error) {
+        //         console.error(error);
+        //         res.status(500).json({ message: 'Internal Server Error' });
+        //     }
+        // });
+
+
+        // app.get('/deliveries/:email', async (req, res) => {
+        //     const page = parseInt(req.query.page) || 1;
+        //     const pageSize = 5;
+
+        //     try {
+        //         const email = req.params.email;
+
+        //         const result = await bookedParcelCollection.find({ email })
+        //             .skip((page - 1) * pageSize)
+        //             .limit(pageSize)
+        //             .toArray();
+
+        //         res.send(result);
+        //     } catch (error) {
+        //         console.error(error);
+        //         res.status(500).json({ error: 'Internal Server Error' });
+        //     }
+        // });
+
+
+
+        // app.get('/deliveries/:deliveryMenId', async (req, res) => {
+        //     const page = parseInt(req.query.page) || 1;
+        //     const pageSize = 5;
+
+        //     try {
+        //         // const deliveryMenId = req.params.email;
+        //         const deliveryMenId = req.params.email;
+
+        //         const result = await bookedParcelCollection.find({ deliveryMenId })
+        //             .skip((page - 1) * pageSize)
+        //             .limit(pageSize)
+        //             .toArray();
+
+        //         res.send(result);
+        //         console.log('this is?', result);
+        //     } catch (error) {
+        //         console.error(error);
+        //         res.status(500).json({ error: 'Internal Server Error' });
+        //     }
+        // });
+
+
+
+
+        app.get('/deliveries/:deliveryMenId', async (req, res) => {
+            try {
+                const deliveryMenId = req.user.email; // Assuming you have the user object in the request
+
+                const parcels = await bookedParcelCollection.find({ deliveryMenId });
+                res.json(parcels);
+            } catch (error) {
+                console.error(error);
+                res.status(500).json({ message: 'Internal Server Error' });
+            }
+        });
+
+
+
+
+        ////////////////////////////
+        app.get('/api/bookedParcels', async (req, res) => {
+            try {
+                const deliveryMenId = req.query.deliveryMenId;
+                console.log('what is it', deliveryMenId);
+
+                const database = client.db('userDB'); // Replace 'your_database' with your actual database name
+
+                const userCollection = client.db('userDB').collection('user');
+                const bookedParcelCollection = client.db('userDB').collection('bookedParcels');
+                const bookedParcels = await database.collection('bookedParcels').aggregate([
+                    {
+                        $lookup: {
+                            from: "user",
+                            let: { deliveryMenId: "$deliveryMenId" },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: { $eq: ["$_id", "$$deliveryMenId"] }
+                                    }
+                                },
+                                {
+                                    $project: {
+                                        _id: 1,
+                                        name: 0,
+                                        // email: 1,
+                                        // requested_delivery_date: 1,
+                                        // Add more fields from user as needed
+                                    }
+                                }
+                            ],
+                            as: "deliveryManDetails"
+                        }
+                    },
+                    {
+                        $unwind: { path: "$deliveryManDetails", preserveNullAndEmptyArrays: true }
+                    },
+                    {
+                        $project: {
+                            _id: 1,
+                            name: 1,
+                            receiver_name: 1,
+                            users_phone: 1,
+                            requested_delivery_date: 1,
+                            approximateDeliveryDate: 1,
+                            receiver_phone: 1,
+                            delivery_address: 1,
+                        }
+                    }
+                ]).toArray();
+
+                res.json(bookedParcels);
+            } catch (error) {
+                console.error('Error:', error);
+                res.status(500).json({ error: 'Internal Server Error' });
+            }
+        });
+        ////////////////////////////
+        /////////////////////////////////////
+        // app.get('/api/bookedParcels', async (req, res) => {
+        //     try {
+        //         const deliveryMenId = req.query.deliveryMenId;
+        //         console.log('information', deliveryMenId);
+
+        //         const database = client.db('yourDBName'); // Replace 'yourDBName' with your actual database name
+        //         const bookedParcelCollection = database.collection('bookedParcels');
+        //         const usersCollection = database.collection('users');
+
+        //         const bookedParcels = await bookedParcelCollection.aggregate([
+        //             {
+        //                 $match: {
+        //                     deliveryMenId: deliveryMenId
+        //                 }
+        //             },
+        //             {
+        //                 $lookup: {
+        //                     from: "users",
+        //                     localField: "deliveryMenId",
+        //                     foreignField: "_id",
+        //                     as: "deliveryManDetails"
+        //                 }
+        //             },
+        //             {
+        //                 $unwind: "$deliveryManDetails"
+        //             },
+        //             {
+        //                 $project: {
+        //                     _id: 1,
+        //                     name: "$deliveryManDetails.name",
+        //                     receiver_name: 1,
+        //                     users_phone: 1,
+        //                     requested_delivery_date: 1,
+        //                     approximateDeliveryDate: 1,
+        //                     receiver_phone: 1,
+        //                     delivery_address: 1,
+        //                 }
+        //             }
+        //         ]).toArray();
+
+        //         res.json(bookedParcels);
+        //     } catch (error) {
+        //         console.error('Error:', error);
+        //         res.status(500).json({ error: 'Internal Server Error' });
+        //     }
+        // });
+
+        ////////////////////////////////////////////
+
+        ////////////////////////////my own
+
+        // const database = client.db('userDB'); // Replace 'your_database' with your actual database name
+
+        // const userCollection = client.db('userDB').collection('user');
+        // const bookedParcelCollection = client.db('userDB').collection('bookedParcels');
+
+        // app.get('deliveryIds', async (req, res) => {
+        //     // const result = await bookedParcelCollection.aggregate([
+        //     const result = await database.collection('bookedParcels').aggregate([
+
+        //     ]).toArray();
+        //     res.send(result);
+        // })
+
+
+        // app.get('/deliveryIds', async (req, res) => {
+        //     try {
+        //         // const result = await bookedParcelCollection.find({ deliveryMenId }).toArray();
+        //         const result = await bookedParcelCollection.find().toArray();
+        //         res.send(result);
+        //     } catch (error) {
+        //         console.error(error);
+        //         res.status(500).send({ message: 'Internal Server Error' });
+        //     }
+        // });
+
+
+
+        // app.get('/deliveryIds', async (req, res) => {
+        //     try {
+        //         // Assuming the user ID is stored in req.user.id
+        //         const deliveryMenId = req.user.id;
+
+        //         // Use the deliveryMenId in the query to filter parcels
+        //         const result = await bookedParcelCollection.find({ deliveryMenId }).toArray();
+
+        //         res.send(result);
+        //     } catch (error) {
+        //         console.error(error);
+        //         res.status(500).send({ message: 'Internal Server Error' });
+        //     }
+        // });
+
+
+
+        //////////////////////////
+
+
+
+
 
 
 
