@@ -314,92 +314,6 @@ async function run() {
 
 
 
-
-        // api for getting all booked parcel which are added by all user/All Parcels
-        // app.get('/bookedParcels', async (req, res) => {
-        //     const page = parseInt(req.query.page) || 1;
-        //     const pageSize = 5;
-
-        //     try {
-        //         const result = await bookedParcelCollection.find()
-        //             .skip((page - 1) * pageSize)
-        //             .limit(pageSize)
-        //             .toArray();
-
-        //         res.send(result);
-        //     } catch (error) {
-        //         console.error(error);
-        //         res.status(500).json({ error: 'Internal Server Error' });
-        //     }
-        // });
-
-
-        // app.get('/bookedParcels', async (req, res) => {
-        //     const page = parseInt(req.query.page) || 1;
-        //     const pageSize = 5;
-        //     const startDate = req.query.startDate;
-        //     const endDate = req.query.endDate;
-
-        //     const query = {};
-
-        //     // Add date range conditions if startDate and endDate are provided
-        //     if (startDate && endDate) {
-        //         query.requested_delivery_date = {
-        //             $gte: new Date(startDate),
-        //             $lte: new Date(endDate),
-        //         };
-        //     }
-
-        //     try {
-        //         const result = await bookedParcelCollection
-        //             .find(query)
-        //             .skip((page - 1) * pageSize)
-        //             .limit(pageSize)
-        //             .toArray();
-
-        //         res.send(result);
-        //     } catch (error) {
-        //         console.error(error);
-        //         res.status(500).json({ error: 'Internal Server Error' });
-        //     }
-        // });
-
-
-
-        // app.get('/bookedParcels', async (req, res) => {
-        //     const page = parseInt(req.query.page) || 1;
-        //     const pageSize = 5;
-        //     const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
-        //     const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
-
-        //     const query = {};
-
-        //     // Add date range conditions if startDate and endDate are provided
-        //     if (startDate && endDate) {
-        //         query.requested_delivery_date = {
-        //             $gte: startDate,
-        //             $lte: endDate,
-        //         };
-        //     }
-
-        //     try {
-        //         const result = await bookedParcelCollection
-        //             .find(query)
-        //             .skip((page - 1) * pageSize)
-        //             .limit(pageSize)
-        //             .toArray();
-
-        //         res.send(result);
-        //     } catch (error) {
-        //         console.error(error);
-        //         res.status(500).json({ error: 'Internal Server Error' });
-        //     }
-        // });
-
-
-
-
-
         app.get('/bookedParcels', async (req, res) => {
             const page = parseInt(req.query.page) || 1;
             const pageSize = 5;
@@ -470,17 +384,6 @@ async function run() {
 
 
 
-        // app.get('/my-deliveries', async (req, res) => {
-        //     const deliveryMenId = '6564dc9e85a82632a77cfc6f'; // Assume you have the delivery man's ID in the request
-
-        //     try {
-        //         const parcels = await bookedParcelCollection.find({ deliveryMenId }).toArray();
-        //         res.json(parcels);
-        //     } catch (error) {
-        //         console.error(error);
-        //         res.status(500).json({ message: 'Internal Server Error' });
-        //     }
-        // });
 
 
         // app.get('/deliveries/:email', async (req, res) => {
@@ -503,27 +406,6 @@ async function run() {
         // });
 
 
-
-        // app.get('/deliveries/:deliveryMenId', async (req, res) => {
-        //     const page = parseInt(req.query.page) || 1;
-        //     const pageSize = 5;
-
-        //     try {
-        //         // const deliveryMenId = req.params.email;
-        //         const deliveryMenId = req.params.email;
-
-        //         const result = await bookedParcelCollection.find({ deliveryMenId })
-        //             .skip((page - 1) * pageSize)
-        //             .limit(pageSize)
-        //             .toArray();
-
-        //         res.send(result);
-        //         console.log('this is?', result);
-        //     } catch (error) {
-        //         console.error(error);
-        //         res.status(500).json({ error: 'Internal Server Error' });
-        //     }
-        // });
 
 
 
@@ -651,53 +533,6 @@ async function run() {
 
         ////////////////////////////////////////////
 
-        ////////////////////////////my own
-
-        // const database = client.db('userDB'); // Replace 'your_database' with your actual database name
-
-        // const userCollection = client.db('userDB').collection('user');
-        // const bookedParcelCollection = client.db('userDB').collection('bookedParcels');
-
-        // app.get('deliveryIds', async (req, res) => {
-        //     // const result = await bookedParcelCollection.aggregate([
-        //     const result = await database.collection('bookedParcels').aggregate([
-
-        //     ]).toArray();
-        //     res.send(result);
-        // })
-
-
-        // app.get('/deliveryIds', async (req, res) => {
-        //     try {
-        //         // const result = await bookedParcelCollection.find({ deliveryMenId }).toArray();
-        //         const result = await bookedParcelCollection.find().toArray();
-        //         res.send(result);
-        //     } catch (error) {
-        //         console.error(error);
-        //         res.status(500).send({ message: 'Internal Server Error' });
-        //     }
-        // });
-
-
-
-        // app.get('/deliveryIds', async (req, res) => {
-        //     try {
-        //         // Assuming the user ID is stored in req.user.id
-        //         const deliveryMenId = req.user.id;
-
-        //         // Use the deliveryMenId in the query to filter parcels
-        //         const result = await bookedParcelCollection.find({ deliveryMenId }).toArray();
-
-        //         res.send(result);
-        //     } catch (error) {
-        //         console.error(error);
-        //         res.status(500).send({ message: 'Internal Server Error' });
-        //     }
-        // });
-
-
-
-        //////////////////////////
 
 
 
