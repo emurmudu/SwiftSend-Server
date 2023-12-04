@@ -5,11 +5,21 @@ const cookieParser = require('cookie-parser');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 
+const multer = require('multer');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
+
+
+
 // const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 
 const app = express();
 const port = process.env.PORT || 5001;
+
+// Set up multer for handling file uploads
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 //middleware
 
@@ -116,7 +126,8 @@ async function run() {
 
 
 
-        app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+        // app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+        app.get('/users', async (req, res) => {
             const page = req.query.page || 1;
             const pageSize = 5;
 
@@ -224,6 +235,44 @@ async function run() {
 
 
 
+        //////////////////////////////
+        //API endpoint to get user data
+        app.put('/updateProfilePicture/:id', async (req, res) => {
+            try {
+                const userId = req.params.id;
+                const filter = { _id: new ObjectId(userId) };
+                const update = {
+                    $set: {
+                        profilePicture: req.body.profilePicture,
+                    },
+                };
+
+                const result = await userCollection.updateOne(filter, update);
+                res.json({ success: true, result });
+            } catch (error) {
+                console.error('Error updating profile picture:', error);
+                res.status(500).json({ success: false, message: 'Internal Server Error' });
+            }
+        });
+
+        // app.put('/users', async (req, res) => {
+        //     const id = req.params.id;
+        //     const filter = { _id: new ObjectId(id) };
+        //     const options = { upsert: true };
+        //     updatePhoto = req.body;
+        //     const photoURL = {
+        //         $set: {
+        //             image: updatePhoto.photoURL
+        //         }
+        //     }
+        //     const result = await bookedParcelCollection.updateOne(filter, photoURL, options);
+        //     res.send(result);
+        // })
+
+        /////////////////////////////
+
+
+
         //api for adding data to database by all users/Parcel Booking
         app.post('/bookedParcels', async (req, res) => {
             const addedParcel = req.body;
@@ -272,12 +321,65 @@ async function run() {
         });
 
 
+        //////////////////Cancel Status Button 
+        app.put('/statusCancel/:id', async (req, res) => {
+            const parcelId = req.params.id;
+
+            if (!ObjectId.isValid(parcelId)) {
+                return res.status(400).json({ error: 'Invalid Parcel ID' });
+            }
+
+            try {
+                const existingParcel = await bookedParcelCollection.findOne({ _id: new ObjectId(parcelId) });
+
+                if (!existingParcel) {
+                    return res.status(404).json({ error: 'Parcel not found' });
+                }
+
+                if (existingParcel.status !== 'pending') {
+                    return res.status(400).json({ error: 'You can only cancel bookings with "pending" status.' });
+                }
+
+                // Show alert before updating the status to 'cancel'
+                const userConfirmed = req.body.userConfirmed === true;
+                if (!userConfirmed) {
+                    return res.json({ message: 'Please confirm the cancellation by setting userConfirmed to true.' });
+                }
+
+                const result = await bookedParcelCollection.updateOne(
+                    { _id: new ObjectId(parcelId), status: 'pending' }, // Add status check to avoid unnecessary updates
+                    {
+                        $set: {
+                            status: 'Canceled',
+                        },
+                    }
+                );
+
+                if (result.modifiedCount > 0) {
+                    return res.json({ success: true, message: 'Parcel canceled successfully' });
+                } else {
+                    return res.status(404).json({ error: 'Parcel not found or already canceled' });
+                }
+            } catch (error) {
+                console.error('Error updating parcel:', error);
+                return res.status(500).json({ error: 'Internal Server Error' });
+            }
+        });
+
+
+        //Delivered button status
+        /////////////////////          
+
+
         app.get('/updateBooking/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
             const result = await bookedParcelCollection.findOne(query);
             res.send(result);
         })
+
+
+
 
 
         // Updating bookings with id
@@ -371,7 +473,12 @@ async function run() {
             }
         });
 
-
+        // app.delete('/bookedParcels/:id', async (req, res) => {
+        //     const id = req.params.id;
+        //     const query = { _id: new ObjectId(id) };
+        //     const result = await bookedParcelCollection.deleteOne(query);
+        //     res.send(result);
+        // })
 
 
 
@@ -381,6 +488,7 @@ async function run() {
             const result = await userCollection.deleteOne(query);
             res.send(result);
         })
+
 
 
 
