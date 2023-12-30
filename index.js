@@ -35,9 +35,11 @@ const upload = multer({ storage: storage });
 
 const corsOptions = {
     origin: [
-        'http://localhost:5173',
+        // 'http://localhost:5173',
         // 'https://assignment-12-client-f25b1.web.app',
         // 'https://assignment-12-client-f25b1.firebaseapp.com'
+        'https://swiftsend-35aff.web.app',
+        'https://swiftsend-35aff.firebaseapp.com'
     ],
     credentials: true,
     optionSuccessStatus: 200,
